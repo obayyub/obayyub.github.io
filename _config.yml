@@ -1,5 +1,5 @@
 title: Omar Ayyub
-description: A clean, minimal personal site and blog
+description: My work and interests.
 url: "https://omar.bet"
 baseurl: ""
 
@@ -8,7 +8,7 @@ author:
   name: Omar Ayyub
   email_name: obayyub
   email_domain: gmail.com
-  bio: "A brief intro about yourself that appears at the top of your homepage."
+  bio: ""
 
 # Build settings
 markdown: kramdown
