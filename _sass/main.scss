@@ -1,0 +1,308 @@
+// Color palette
+$black: #1a1a1a;
+$white: #ffffff;
+$gray: #666666;
+$light-gray: #f8f8f8;
+$olive: #8b956d;
+$camel: #c19a6b;
+
+// Typography
+$font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+$font-size-base: 18px;
+$line-height: 1.6;
+
+// Spacing
+$spacing-unit: 1.5rem;
+$max-width: 42rem;
+
+// Reset and base styles
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-family;
+  font-size: $font-size-base;
+  line-height: $line-height;
+  color: $black;
+  background-color: $white;
+  margin: 0;
+  padding: 0;
+}
+
+// Layout
+.content {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: 0 $spacing-unit;
+  min-height: calc(100vh - 8rem);
+}
+
+// Header
+.site-header {
+  border-bottom: 1px solid #eee;
+  margin-bottom: $spacing-unit * 2;
+}
+
+.site-nav {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: $spacing-unit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.site-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: $black;
+  text-decoration: none;
+  
+  &:hover {
+    color: $olive;
+  }
+}
+
+.nav-links a {
+  color: $gray;
+  text-decoration: none;
+  font-size: 0.95rem;
+  
+  &:hover {
+    color: $camel;
+  }
+}
+
+// Footer
+.site-footer {
+  margin-top: $spacing-unit * 3;
+  padding: $spacing-unit;
+  text-align: center;
+  font-size: 0.9rem;
+  color: $gray;
+  border-top: 1px solid #eee;
+}
+
+// Intro section
+.intro {
+  margin-bottom: $spacing-unit * 2.5;
+  
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: $black;
+  }
+  
+  p {
+    font-size: 1.1rem;
+    color: $gray;
+    margin: 0;
+  }
+}
+
+// Posts section
+.posts {
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 $spacing-unit 0;
+    color: $black;
+  }
+}
+
+.post-item {
+  margin-bottom: $spacing-unit * 1.5;
+  
+  .post-date {
+    display: block;
+    font-size: 0.9rem;
+    color: $camel;
+    margin-bottom: 0.25rem;
+  }
+  
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    
+    a {
+      color: $black;
+      text-decoration: none;
+      
+      &:hover {
+        color: $olive;
+      }
+    }
+  }
+  
+  .post-excerpt {
+    color: $gray;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+// Individual post
+.post {
+  .post-header {
+    margin-bottom: $spacing-unit * 2;
+    
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      color: $black;
+    }
+    
+    .post-date {
+      font-size: 0.9rem;
+      color: $camel;
+    }
+  }
+  
+  .post-content {
+    h2, h3, h4, h5, h6 {
+      margin-top: $spacing-unit * 1.5;
+      margin-bottom: $spacing-unit * 0.5;
+      color: $black;
+    }
+    
+    p {
+      margin-bottom: $spacing-unit;
+    }
+    
+    a {
+      color: $olive;
+      text-decoration: underline;
+      text-decoration-color: rgba($olive, 0.4);
+      
+      &:hover {
+        text-decoration-color: $olive;
+      }
+    }
+    
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: $spacing-unit auto;
+      border-radius: 4px;
+    }
+    
+    // Image size classes for manual control
+    .img-small { max-width: 400px; }
+    .img-medium { max-width: 600px; }
+    .img-large { max-width: 800px; }
+    .img-full { max-width: 100%; }
+    
+    blockquote {
+      border-left: 3px solid $camel;
+      padding-left: $spacing-unit;
+      margin: $spacing-unit 0;
+      color: $gray;
+      font-style: italic;
+    }
+    
+    code {
+      background-color: $light-gray;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.9rem;
+    }
+    
+    pre {
+      background-color: $light-gray;
+      padding: $spacing-unit;
+      border-radius: 4px;
+      overflow-x: auto;
+      
+      code {
+        background: none;
+        padding: 0;
+      }
+    }
+  }
+}
+
+.post-nav {
+  margin-top: $spacing-unit * 2;
+  
+  .back-link {
+    color: $gray;
+    text-decoration: none;
+    font-size: 0.9rem;
+    
+    &:hover {
+      color: $olive;
+    }
+  }
+}
+
+// Page layout
+.page {
+  .page-header {
+    margin-bottom: $spacing-unit * 2;
+    
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 0;
+      color: $black;
+    }
+  }
+  
+  .page-content {
+    h2, h3, h4, h5, h6 {
+      margin-top: $spacing-unit * 1.5;
+      margin-bottom: $spacing-unit * 0.5;
+      color: $black;
+    }
+    
+    p {
+      margin-bottom: $spacing-unit;
+    }
+    
+    a {
+      color: $olive;
+      text-decoration: underline;
+      text-decoration-color: rgba($olive, 0.4);
+      
+      &:hover {
+        text-decoration-color: $olive;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .content {
+    padding: 0 1rem;
+  }
+  
+  .site-nav {
+    padding: 1rem;
+  }
+  
+  .intro h1 {
+    font-size: 1.7rem;
+  }
+  
+  .post .post-header h1 {
+    font-size: 1.7rem;
+  }
+  
+  .page .page-header h1 {
+    font-size: 1.7rem;
+  }
+}
+
+// Focus styles for accessibility
+a:focus,
+button:focus {
+  outline: 2px solid $olive;
+  outline-offset: 2px;
+}

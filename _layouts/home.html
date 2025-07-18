@@ -1,0 +1,17 @@
+---
+layout: default
+---
+
+<section class="posts">
+  
+  {% for post in site.posts %}
+    <article class="post-item">
+      <time class="post-date" datetime="{{ post.date | date_to_xmlschema }}">
+        {{ post.date | date: "%B %d, %Y" }}
+      </time>
+      <h3>
+        <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+      </h3>
+    </article>
+  {% endfor %}
+</section>
