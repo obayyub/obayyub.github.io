@@ -75,7 +75,7 @@ The main takeaway: models are idiosyncratic in ways that aren't easily predictab
 Here's where something consistent emerged. I ran layer sweeps for all models, extracting steering vectors from layers past 33% depth. Later layers (>50% depth) generally had larger impact, which is no surprise.
 
 <div align="center">
-<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/delta_by_layer_fraction.png" width="94%">
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/delta_by_layer_fraction.png">
 </div>
 
 What stood out: regardless of model size, the RL-trained models (32B and 235B-A22B) showed optimal steering at deeper layers than their distilled counterparts. Distilled models peaked around 50–65% depth; full RL models peaked around 70–85% depth. This held across all six datasets and both dense and MoE architectures.
