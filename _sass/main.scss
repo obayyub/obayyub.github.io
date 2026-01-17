@@ -335,18 +335,17 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin: $spacing-unit 0;
-  font-size: 0.9rem;
-  border: 1px solid #ccc;
+  font-size: 0.85rem;
 
   th, td {
-    padding: 0.6rem 1rem;
+    padding: 0.35rem 0.6rem;
     text-align: left;
-    border: 1px solid #ccc;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   th {
     font-weight: 600;
-    background-color: $light-gray;
+    border-bottom: 1px solid #ccc;
   }
 
   tbody tr:nth-child(even) {
