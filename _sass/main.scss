@@ -218,10 +218,33 @@ body {
       padding: $spacing-unit;
       border-radius: 4px;
       overflow-x: auto;
-      
+
       code {
         background: none;
         padding: 0;
+      }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: $spacing-unit 0;
+      font-size: 0.9rem;
+
+      th, td {
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      th {
+        font-weight: 600;
+        background-color: $light-gray;
+        border-bottom: 2px solid #ddd;
+      }
+
+      tr:hover {
+        background-color: rgba($light-gray, 0.5);
       }
     }
   }

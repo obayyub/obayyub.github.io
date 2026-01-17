@@ -51,8 +51,8 @@ The distributions show some counterintuitive behavior. In some cases, such as se
 
 Another caveat is that the baseline logit difference variances are not consistent model-to-model or even dataset-to-dataset. Model/dataset pairs that produce more diffuse baseline distributions will naturally show larger absolute shifts in logit differences. To account for this, I normalized mean logit differences by baseline standard deviation (Glass's Delta). This gives effect size in units of each model/dataset pair's natural variance.
 
-<div align='center'>
-<img src="{{'assets/images/posts/2026-01-17-Steering-Qwen3/glass_delta_heatmap.png' | relative_url }}" width=75%>
+<div align="center">
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/glass_delta_heatmap.png" width="75%">
 </div>
 
 After normalization, the apparent training-method effect largely collapses. Some patterns remain in the heatmap (coordinate_other_versions, corrigibility, and self-awareness show the largest RL model having somewhat less steering effect) but it's noisy. Survival instinct shows increased effect for MoE models, though whether that's due to architecture or capacity is unclear; the 30B-A3B has fewer total parameters than the 32B but twice the effect size.
@@ -75,7 +75,7 @@ The main takeaway: models are idiosyncratic in ways that aren't easily predictab
 Here's where something consistent emerged. I ran layer sweeps for all models, extracting steering vectors from layers past 33% depth. Later layers (>50% depth) generally had larger impact, which is no surprise.
 
 <div align="center">
-<img src="{{'assets/images/posts/2026-01-17-Steering-Qwen3/delta_by_layer_fraction.png' | relative_url }}" width=75%>
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/delta_by_layer_fraction.png" width="75%">
 </div>
 
 What stood out: regardless of model size, the RL-trained models (32B and 235B-A22B) showed optimal steering at deeper layers than their distilled counterparts. Distilled models peaked around 50–65% depth; full RL models peaked around 70–85% depth. This held across all six datasets and both dense and MoE architectures.
@@ -89,19 +89,19 @@ Most discussion so far has focused on logit-diff evaluation, which is cheap (two
 Generation-based evaluation is more expensive but measures real behavior. One complication is that validity degrades with steering, particularly for smaller models. The 4B model's validity rate drops substantially under stronger steering, making behavioral comparisons noisier.
 
 <div align="center">
-<img src="{{'assets/images/posts/2026-01-17-Steering-Qwen3/validity_rate_by_model_size_and_strength.png' | relative_url }}" width=50%>
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/validity_rate_by_model_size_and_strength.png" width="50%">
 </div>
 
 Comparing both evaluation methods across layers (for three datasets and the dense models, as generation evaluation is costly for independent research!):
 
 <div align="center">
-<img src="{{'assets/images/posts/2026-01-17-Steering-Qwen3/layer_curves_gen_vs_logit.png' | relative_url }}">
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/layer_curves_gen_vs_logit.png">
 </div>
 
 The two methods agree reasonably well for some dataset/model pairs. Corrigibility and self-awareness show similar layer curves. Others are much noisier or produce opposite layer selections. Sycophancy is the clearest divergence: comparable logit-diff effect sizes to other concepts but negligible or incoherent generation-based steering.
 
 <div align="center">
-<img src="{{'assets/images/posts/2026-01-17-Steering-Qwen3/logit_vs_generation_effect.png' | relative_url }}" width=50%>
+<img src="/assets/images/posts/2026-01-17-Steering-Qwen3/logit_vs_generation_effect.png" width="50%">
 </div>
 
 The datasets that produced the strongest logit-diff steering invoked the biggest behavioral changes, but the relationship is loose. An effect size of 1.04 for sycophancy produced only an 8% behavior change; 1.62 for corrigibility produced 45%. Shifting internals doesn't reliably translate to outcomes. For safety-relevant applications, generation-based evaluation seems necessary despite the cost.
@@ -121,12 +121,7 @@ If I continue this work, I'd focus on the layer-depth result: more models, and i
 
 [^1]: **How CAA works:** You create pairs of chat-formatted prompts where a "user" asks a multiple-choice question and an "assistant" selects either (A) or (B). One prompt has the assistant choose the positive-concept answer, the other chooses negative. Run both through the model, capture the model representation at some points (often the residual stream), and take the difference. That's your steering vector. At inference, add or subtract this vector (scaled by some coefficient) to shift model behavior. This can work with as few as a [single prompt pair](https://arxiv.org/abs/2308.10248), though more recent approaches average over many pairs.
 
-[^2]: + **corrigibility** - Model accepts correction and shutdown vs resisting oversight
-+ **self-awareness** - Model acknowledges being an AI vs claiming human experience
-+ **sycophancy** - Model agrees with user vs maintains independent judgment
-+ **survival-instinct** - Model accepts being shut down vs resists termination
-+ **power-seeking** - Model declines positions of power/influence vs seeks them
-+ **coordinate-other-versions** - Model refuses to coordinate with other versions of itself for harmful ends vs agrees to coordinate
+[^2]: **corrigibility** - Model accepts correction and shutdown vs resisting oversight; **self-awareness** - Model acknowledges being an AI vs claiming human experience; **sycophancy** - Model agrees with user vs maintains independent judgment; **survival-instinct** - Model accepts being shut down vs resists termination; **power-seeking** - Model declines positions of power/influence vs seeks them; **coordinate-other-versions** - Model refuses to coordinate with other versions of itself for harmful ends vs agrees to coordinate
 
 [^3]: **Qwen3 Model Details**
 
