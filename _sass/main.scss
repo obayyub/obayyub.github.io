@@ -329,3 +329,27 @@ button:focus {
   outline: 2px solid $olive;
   outline-offset: 2px;
 }
+
+// Tables (global)
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: $spacing-unit 0;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+
+  th, td {
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border: 1px solid #ccc;
+  }
+
+  th {
+    font-weight: 600;
+    background-color: $light-gray;
+  }
+
+  tbody tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+}
