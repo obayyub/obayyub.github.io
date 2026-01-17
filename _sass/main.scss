@@ -332,13 +332,12 @@ button:focus {
 
 // Tables (global)
 table {
-  width: 100%;
   border-collapse: collapse;
   margin: $spacing-unit 0;
   font-size: 0.85rem;
 
   th, td {
-    padding: 0.35rem 0.6rem;
+    padding: 0.3rem 0.5rem;
     text-align: left;
     border-bottom: 1px solid #e0e0e0;
   }
@@ -346,9 +345,5 @@ table {
   th {
     font-weight: 600;
     border-bottom: 1px solid #ccc;
-  }
-
-  tbody tr:nth-child(even) {
-    background-color: #fafafa;
   }
 }
