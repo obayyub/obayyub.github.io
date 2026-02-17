@@ -13,7 +13,7 @@ $line-height: 1.6;
 
 // Spacing
 $spacing-unit: 1.5rem;
-$max-width: 42rem;
+$max-width: 50rem;
 
 // Reset and base styles
 * {
@@ -218,6 +218,8 @@ body {
       padding: $spacing-unit;
       border-radius: 4px;
       overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
 
       code {
         background: none;
