@@ -152,7 +152,7 @@ One last note in comparing MELBO and power steering is that they found at least 
 
 3. **Steering works best where there's tension in model decision-making.** Arithmetic reasoning, refusal, and corrigibility all involve balancing competing behaviors. Steering seems to amplify weaker modes. Open-ended generation produced much weaker surface-level effects.
 
-4. **Local linear matches nonlinear-derived steering vectors.** The power iteration derived right singular vectors achieved similar performance to MELBO on corrigibility steering. The local linear approximation captures the steering-relevant structure.
+4. **Local linear produces steering vectors with similar efficacy to nonlinear-derived ones.** The power iteration derived right singular vectors achieved similar performance to MELBO on corrigibility steering. The local linear approximation captures the steering-relevant structure.
 
 5. **Steering may amplify existing computation.** The best CoT vectors align with the model's natural representation on math prompts, and the refuse/comply axis is the dominant mode of Jacobian variation on refusal prompts. The steering vectors may not inject new capability but amplify latent circuits that the model already uses in its decision-making.
 
