@@ -922,7 +922,7 @@ async function selectCotVector(vi) {
     if (genCache[cacheKey]) {
       pairData = genCache[cacheKey];
     } else {
-      const resp = await fetch(`../results/jacobian_gen/pairs/${key}.json`);
+      const resp = await fetch(`cot_pairs/${key}.json`);
       pairData = await resp.json();
       genCache[cacheKey] = pairData;
     }
