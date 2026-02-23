@@ -834,8 +834,8 @@ function renderCotHeatmaps() {
     axes, 'Max KL divergence', 'Inferno', selectCotPair);
 
   plotHeatmap('hm-c-acc',
-    makeTriangleZ(pairs, n, p => p.accs ? Math.min(...p.accs) : null),
-    axes, 'Min accuracy', 'RdYlGn', selectCotPair);
+    makeTriangleZ(pairs, n, p => p.accs ? Math.max(...p.accs) : null),
+    axes, 'Max accuracy', 'RdYlGn', selectCotPair);
 }
 
 /* ===== CoT: pair selection ===== */
