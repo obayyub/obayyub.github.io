@@ -4,6 +4,8 @@ title: "Power Steering: Behavior Steering via Layer-to-Layer Jacobian Singular V
 date: 2026-02-17
 ---
 
+*Update March 05, 2026*
+
 ## TLDR
 
 The right singular vectors of the Jacobian between MLP outputs at a source and target layer can steer model behavior. This method, which we call power steering (power iteration + steering vectors), builds on the intuition from [MELBO](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1), but replaces nonlinear optimization with its local linear approximation. We used block power iteration with Rayleigh-Ritz correction to cheaply extract the top-$k$ right singular vectors, requiring only ~15 forward passes per layer pair. The method is cheap enough to map every layer pair in a model, producing a full sensitivity atlas. The discovered vectors worked best on prompts with tension (arithmetic, refusal, corrigibility) rather than open-ended generation, and produced similar performance to MELBO while outperforming CAA on corrigibility steering in Qwen3-14B.
@@ -136,7 +138,11 @@ One last note in comparing MELBO and power steering is that they found at least 
 
 ## Limitations and Future Work
 
-**Scale selection is underexplored.** Most experiments used a fixed steering scale of 10, but MLP output norms vary ~50x across layers in Qwen3-8B (5-15 at early layers, 100-700 in late layers)[^6]. This likely explains incoherent generations from early-layer vectors and weak effects from late-layer sources. Initial experiments with norm-proportional scaling showed more coherent effects across layers, but systematic tuning remains future work. Scale also interacted with task difficulty: steering improved simple arithmetic but hurt on hard word problems, suggesting the optimal scale may be task-dependent.
+**The power iteration process (or randomized svd) gets noisy in the degenerate subspace** The singular value spectrum is near-degenerate past the top ~5 vectors, so higher-ranked vectors are noisy without sufficient oversampling in the block iteration. Adding padding vectors improves this but I do not have the budget to repeat many of these experiments. Interestingly, behavior steering vectors exist in this degenerate subspace. 
+
+**Power iteration process (or randomized svd) is only correct up to sign** Only one sign of each singular vector was evaluated in the sensitivity atlas, so behavioral changes associated with the opposite sign may have been missed.
+
+**Scale selection is underexplored.** Most experiments used a fixed steering scale of 10, but MLP output norms vary ~50x across layers in Qwen3-8B (5-15 at early layers, 100-700 in late layers)[^6]. This likely explains incoherent generations from early-layer vectors and weak effects from late-layer sources. Initial experiments with norm-proportional scaling showed more coherent effects across layers and has been added to the dashboard and the KL heatmap for refusal was updated with this norm scaling.
 
 **KL divergence is a noisy proxy for behavioral change.** We used logit KL divergence as a filter to select vectors worth evaluating with full generation. While it worked as a coarse filter, high KL did not guarantee meaningful behavioral shifts, and we did not systematically characterize when it misleads. A better selection criterion could improve the yield of useful vectors.
 
@@ -155,6 +161,10 @@ One last note in comparing MELBO and power steering is that they found at least 
 4. **Local linear produces steering vectors with similar efficacy to nonlinear-derived ones.** The power iteration derived right singular vectors achieved similar performance to MELBO on corrigibility steering. The local linear approximation captures the steering-relevant structure.
 
 5. **Steering may amplify existing computation.** The best CoT vectors align with the model's natural representation on math prompts, and the refuse/comply axis is the dominant mode of Jacobian variation on refusal prompts. The steering vectors may not inject new capability but amplify latent circuits that the model already uses in its decision-making.
+
+## Acknowledgements
+
+I want to thank Jack Strand and Nick Turner for helpful discussions and feedback on this work.
 
 ---
 
