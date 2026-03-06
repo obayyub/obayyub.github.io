@@ -69,7 +69,7 @@ Finally I asked whether these steering vectors are naturally present in the mode
 
 Ratio = \|projection onto steering vector\| / \|mean projection onto random vectors\|:
 
-| Vector | arith_training | arith_chained_ops | word_easy | word_hard | word_control (non-math) |
+| Vector | 'Training' Arithmetic | Arithmetic Chained ops| 'Easy' Word Problems | 'Hard' Word Problems | Non-math Word Problems |
 |--------|----------|----------|-----------|-----------|---------|
 | **(7,25)v1 good** | **3.68x** | **2.97x** | **2.79x** | **2.70x** | **0.60x** |
 | (7,25)v0 bad | 0.34x | 0.21x | 0.35x | 0.26x | 1.33x |
