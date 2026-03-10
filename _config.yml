@@ -12,6 +12,8 @@ author:
 
 # Build settings
 markdown: kramdown
+kramdown:
+  math_engine: mathjax
 highlighter: rouge
 permalink: /:year/:month/:day/:title/
 

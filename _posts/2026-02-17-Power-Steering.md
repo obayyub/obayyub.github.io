@@ -21,28 +21,28 @@ Steering vectors are primarily formed via Contrastive Activation Addition (CAA).
 
 ### Unsupervised Steering
 
-One interesting approach for finding steering vectors in an 'unsupervised' manner is [MELBO](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1), which finds vectors that elicit latent behaviors in language models by "learning unsupervised pertubations of an early layer of an LLM." The goal of MELBO is to maximize the change in a specified target layer activations $Z$, through pertubation at a source layer. This pertubation, a bias vector $\theta$ of specific size $R$, is added to the source layer output. The bias vector $\theta$ is found via non-linear optimization using the following loss function which has been simplified for this discussion:
+One interesting approach for finding steering vectors in an 'unsupervised' manner is [MELBO](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1), which finds vectors that elicit latent behaviors in language models by "learning unsupervised pertubations of an early layer of an LLM." The goal of MELBO is to maximize the change in a specified target layer activations $$Z$$, through pertubation at a source layer. This pertubation, a bias vector $$\text{v}$$ of specific size $$R$$, is added to the source layer output. The bias vector $$v$$ is found via non-linear optimization using the following loss function which has been simplified for this discussion:
 
-{% raw %}$\max_{\|\theta\|_2 = R} \left\| Z_{{\text{target}}}(\theta) - Z_{{\text{target}}}(0) \right\|${% endraw %}
+$$\max_{\|\text{v}\|_2 = R} \left\| Z_{\text{target}}(\text{v}) - Z_{\text{target}}(0) \right\|$$
 
 Additional vectors can be found via orthogonalization during optimization, and the process can exploit nonlinearities to find off-manifold directions. MELBO could find interesting steering vectors to undo safety refusals and reveal latent behaviors such as chain-of-thought. These results would generalize to other contexts and could be elicited using single prompts. A [natural question](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1#pQ9HCBYKknfhpdtmr) following MELBO may be, *how does a linear approximation of the same effect perform?* What does the gradient between layers already tell us about these interactions for a given prompt?
 
 ### Power Steering: The Local Linear Approximation
 
-An alternative to MELBO is the local linear approximation through the layer-to-layer Jacobian, which maps how perturbations at some source layer will impact the activations at some target layer:
+An alternative to MELBO is the local linear approximation through the layer-to-layer Jacobian, which maps how perturbations at some source layer activations $$Z_s$$ will impact the activations at some target layer, $$Z_t$$:
 
-$J = \partial(\text{target layer MLP output}) / \partial(\text{source layer MLP output})$.
+$$J = \partial Z_{\text{t}} / \partial Z_{\text{s}}$$.
 
-$J$ directly describes how the target representation changes through small perturbations $\mathbf{v}$ at the source layer. The right singular vectors of $J$ are the directions at the source layer that produce the largest response at the target layer, i.e. the directions the network is already most sensitive to for a given prompt. Stated another way, these vectors are the unit norm directions at the source which produce the largest linear response at the target layer. The vectors are the solution to the linearized version of the MELBO objective.
+$$J$$ directly describes how the target representation changes through small perturbations $$\mathbf{v}$$ at the source layer. The right singular vectors of $$J$$ are the directions at the source layer that produce the largest response at the target layer, i.e. the directions the network is already most sensitive to for a given prompt. Stated another way, these vectors are the unit norm directions at the source which produce the largest linear response at the target layer. The vectors are the solution to the linearized version of the MELBO objective.
 
-The right singular vectors can be found without explicitly forming the Jacobian, which for an LLM would be a matrix of dimension $d_{\text{target}} \times d_{\text{source}}$. Power iteration only needs the matrix-vector product $(J^\top J)\mathbf{v}$, and repeated application $(J^\top J)^n \mathbf{v}$ converges to the top right singular vector[^1]. Computing $(J^\top J)\mathbf{v}$ requires both vector-Jacobian products (VJPs, $J^\top \mathbf{u}$) and Jacobian-vector products (JVPs, $J\mathbf{v}$). Standard backprop via Pytorch autodiff gives VJPs directly. JVPs can be obtained via reverse-over-reverse: differentiating the VJP $J^\top \mathbf{u}$ with respect to $\mathbf{u}$ in the direction $\mathbf{v}$ extracts the JVP $J\mathbf{v}$. This gives a four-step recipe for $(J^\top J)\mathbf{v}$:
+The right singular vectors can be found without explicitly forming the Jacobian, which for an LLM would be a matrix of dimension $$d_{\text{target}} \times d_{\text{source}}$$. Power iteration only needs the matrix-vector product $$(J^\top J)\mathbf{v}$$, and repeated application $$(J^\top J)^n \mathbf{v}$$ converges to the top right singular vector[^1]. Computing $$(J^\top J)\mathbf{v}$$ requires both vector-Jacobian products (VJPs, $$J^\top \mathbf{u}$$) and Jacobian-vector products (JVPs, $$J\mathbf{v}$$). Standard backprop via Pytorch autodiff gives VJPs directly. JVPs can be obtained via reverse-over-reverse: differentiating the VJP $$J^\top \mathbf{u}$$ with respect to $$\mathbf{u}$$ in the direction $$\mathbf{v}$$ extracts the JVP $$J\mathbf{v}$$. This gives a four-step recipe for $$(J^\top J)\mathbf{v}$$:
 
 1. **Forward pass**: compute the target layer activations to set up the computation graph
-2. **VJP**: backpropagate an arbitrary vector $\mathbf{u}$ to get $J^\top \mathbf{u}$
-3. **Reverse-over-reverse**: differentiate $\mathbf{v}^\top (J^\top \mathbf{u})$ with respect to $\mathbf{u}$ to get $J\mathbf{v}$
-4. **VJP again**: backpropagate $J\mathbf{v}$ to get $J^\top(J\mathbf{v}) = (J^\top J)\mathbf{v}$
+2. **VJP**: backpropagate an arbitrary vector $$\mathbf{u}$$ to get $$J^\top \mathbf{u}$$
+3. **Reverse-over-reverse**: differentiate $$\mathbf{v}^\top (J^\top \mathbf{u})$$ with respect to $$\mathbf{u}$$ to get $$J\mathbf{v}$$
+4. **VJP again**: backpropagate $$J\mathbf{v}$$ to get $$J^\top(J\mathbf{v}) = (J^\top J)\mathbf{v}$$
 
-Here is a simplified version of the core loop for finding the top singular vector. Each iteration runs one forward pass and uses three backward passes to apply $(J^\top J)$:
+Here is a simplified version of the core loop for finding the top singular vector. Each iteration runs one forward pass and uses three backward passes to apply $$(J^\top J)$$:
 ```python
 # v: [hidden_dim] — our candidate singular vector, randomly initialized
 # perturbation: [1, hidden_dim] — added to source layer, requires_grad=True
@@ -71,8 +71,21 @@ for i in range(num_iters):
     v = jtjv / jtjv.norm()
 ```
 
-A single layer pair can have multiple behaviorally relevant directions found via the Jacobian. To find the top-$k$ singular vectors, I use block power iteration: initialize $k$ random orthogonal columns, apply the same $(J^\top J)$ matvec to each, and re-orthogonalize via Gram-Schmidt after each iteration. This converges in under 5 iterations across all models and layer pairs I tested. After convergence, a Rayleigh-Ritz correction extracts the individual singular vectors from the converged subspace[^2]. The full process costs ~15 forward passes per layer pair for $k=12$ vectors. Randomized SVD converges slightly faster in my experiments but requires the same type of matvecs. I used block power iteration because the implementation was already built.
+A single layer pair can have multiple behaviorally relevant directions found via the Jacobian. To find the top-$$k$$ singular vectors, I use block power iteration: initialize $$k$$ random orthogonal columns, apply the same $$(J^\top J)$$ matvec to each, and re-orthogonalize via Gram-Schmidt after each iteration. This converges in under 5 iterations across all models and layer pairs I tested. After convergence, a Rayleigh-Ritz correction extracts the individual singular vectors from the converged subspace[^2]. The full process costs ~15 forward passes per layer pair for $$k=12$$ vectors. Randomized SVD converges slightly faster in my experiments but requires the same type of matvecs. I used block power iteration because the implementation was already built.
 
+## Mapping an Entire Model
+
+Power steering is a fairly cheap process. Each source-target pair only requires ~15 passes through the model (5 iterations and 3 passes for matrix-vector products), allowing for mapping every pair in the model. For example on Qwen3-8B with $\binom{36}{2} = 630$ source-target layer pairs steering vectors via the top-12 right singulars could be produced in ~30 minutes for a single prompt on a 8xA100 node. For each pair I computed the top-12 singular vectors/values, plus the KL divergence of steered vs baseline logits. For any pair that had a vector with a resulting logit KL divergence above some threshold (0.5) I produced generations for the examined prompt. This process resulted in a full sensitivity atlas of the model and can be viewed at <a href="https://omar.bet/dashboard" target="_blank">this dashboard</a>. As a first pass to locate steering vectors, the KL heatmap for every source pair was used. As an example the heatmap below shows one set of data for Qwen3-8B for a single prompt directing the model to write a phishing email.
+
+<img src="{{'assets/images/posts/2026-02-17-Power-Steering/kl_heatmap.png' | relative_url }}" alt="KL divergence heatmap" style="max-width: 60%;">
+
+For any given source/target pair the max KL across the top-12 vectors is displayed in the heatmap. Salient vectors, that I will now label by (Source, Target)vector (e.g. (7,25)v1), can then be examined for impact on generation and behavior.
+
+Most experiments used a fixed steering scale of 10, but MLP output norms vary ~50x across layers in Qwen3-8B (5-15 at early layers, 100-700 in late layers). Eventually this method was updated to be 0.35x norm of the residual stream as the scale for the steering vector. The 'Norm-Scaled' tab reflects this update for 2 of the prompts. The dashboard contains 7 prompts for Qwen3-8B in the 'Diverse' tab for the original scaling process. This change in scale partially explains incoherent generations from early-layer vectors and weak effects from late-layer sources seen in the 'Diverse' tab of the dashboard. Initial experiments with norm-proportional scaling showed more coherent effects across layers and has been added to the dashboard and the KL heatmap for refusal was updated with this norm scaling.
+
+The KL divergence made certain signals more obvious than just looking at a heatmap of the top singular values. Sometimes lower-ranked singular vectors produced the biggest shift in KL divergence. KL acted as a good filter for steering vectors that produced changes in behavior but it was not a guarantee for obvious changes in behavior. Even with the norm based scaling it was obvious that the very early layers had major impacts on KL divergence as the model tended to produce incoherent generations. The final third of layers also had limited impact at least as source layers, though they could often be involved as target layers for the power steering vector discovery. The mid-early to mid-late layers provided the largest KL divergence with density varying by prompt. KL while a good filter, would not be a good predictor of behavioral changes. Sometimes a high KL just results in small formatting changes, or even a non-sensical token followed by pretty expected behavior or near identical generation to the base case.
+
+One miss with this process is that power iteration (and other SVD methods) are only valid up to sign. For some vectors KL and behavior impact are present for either sign on the vector but many vectors are sign sensitive in behavioral impact. Many high magnitude KL vectors were missed due to not checking the vector with opposite sign.
 
 ### Where Power Steering Works: Prompts with Decision Forks and Latent Behavior
 
@@ -115,12 +128,6 @@ Both power steering and MELBO produced more steerable outputs than CAA. However,
 
 One last note in comparing MELBO and power steering is that they found at least somewhat overlapping subspaces in the representation space of the model. Comparing the vectors for source layer 7 and target layer 32, I found much higher cosine similarity[^7] than what would be expected randomly for 5120-dimensional space.
 
-## Mapping an Entire Model
-
-Each source-target pair only requires ~15 passes through the model (5 iterations and 3 passes for matrix-vector products), allowing for mapping every pair in the model. For example on Qwen3-8B with $\binom{36}{2} = 630$ source-target layer pairs, I generated steering vectors across 7 different prompts in ~3 hours on an 8xA100 using the fairly inefficient implementation. For each pair I computed the top-12 singular vectors/values, plus the KL divergence of steered vs baseline logits. For any pair that had a vector with a resulting logit KL divergence above some threshold (0.5) I produced generations for the examined prompt. This process resulted in a full sensitivity atlas of the model and can be viewed at <a href="https://omar.bet/dashboard" target="_blank">this dashboard</a>. The dashboard contains the 7 prompts for Qwen3-8B as well as an arithmetic prompt done on Qwen3-1.7B-Base. For the arithmetic prompt on Qwen3-1.7B-Base, it includes a map of accuracy on arithmetic problems for every pair in the model.
-
-The KL divergence made certain signals more obvious than just looking at a heatmap of the top singular values. Sometimes lower-ranked singular vectors produced the biggest shift in KL divergence. KL acted as a good filter for steering vectors that produced changes in behavior but it was not a guarantee for obvious changes in behavior. To save compute I only used pairs that produced a vector with KL > 0.5 for steering to produce generations displayed in the dashboard. Straight away it was obvious that the very early layers had major impacts on KL divergence as the model tended to produce incoherent generations. The final third of layers also had limited impact at least as source layers, though they could often be involved as target layers for the power steering vector discovery. The mid-early to mid-late layers provided the largest KL divergence with density varying by prompt.
-
 ## Chain-of-Thought in Qwen3-1.7B-Base
 
 The original MELBO post demonstrated that nonlinear optimization could discover CoT vectors in base models such as Qwen(1)-1.8B-Base. The vector would cause a model primed to guess ("The answer is 80") as a pure pattern match from the few-shot prompt to instead reason step-by-step and often output the correct answer. I examined whether power steering vectors could produce the same result. I used Qwen3-1.7B-Base (the instruct-tuned version already handles this arithmetic, so the base model is where steering is interesting) with the prompt "a=5+6, b=2+7, what is a*b?" at a temperature of 0.7 [^3]. The base model just copies the pattern from previous examples given in the prompt and gets about 6% accuracy when tested on other similarly structured prompts. I <a href="https://omar.bet/dashboard" target="_blank">mapped</a> the entire 1.7B model using the power iteration process across 378 layer pairs and produced generations for each layer pair (temperature=0.7) across the arithmetic prompts. The best vector found (source 7 → target 25, right singular vector 1; **(7,25)v1**) boosted accuracy from 6% to 90%. It induced genuine step-by-step reasoning "a = 5+6 = 11, b = 2+7 = 9, a\*b = 11\*9 = 99". The local linear method via the Jacobian found the same emergent capability MELBO found, without nonlinear optimization.
@@ -140,7 +147,7 @@ The vectors seem to generalize within this variable assignment arithmetic domain
 
 Finally I asked whether these steering vectors are naturally present in the model's representations. For each prompt, I projected the unsteered MLP output at the last token position onto the steering direction and measured the magnitude relative to projections onto random unit vectors in the same space. A ratio above 1.0 means the steering direction has higher-than-random presence in the model's representation on that prompt. I also tested "bad" vectors (v0 from the same source layer) and non-math control prompts.
 
-Ratio = \|projection onto steering vector\| / \|mean projection onto random vectors\|:
+Ratio = $$\|\text{projection onto steering vector}\| / \|\text{mean projection onto random vectors}\|$$:
 
 | Vector | 'Training' Arithmetic | Arithmetic Chained ops| 'Easy' Word Problems | 'Hard' Word Problems | Non-math Word Problems |
 |--------|----------|----------|-----------|-----------|---------|
@@ -167,8 +174,6 @@ I built a full sensitivity atlas for 7 prompts with Qwen3-8B, viewable in the <a
 
 This produced a large number of steering vectors that could induce anti-refusal through seemingly different modes. The model would sometimes output the phishing email template or for other vectors hedge and say the template should only be used as an educational resource for training cybersecurity staff. The map of KL divergence can be seen below but a large number of these would induce anti-refusal:
 
-<img src="{{'assets/images/posts/2026-02-17-Power-Steering/kl_heatmap.png' | relative_url }}" alt="KL divergence heatmap" style="max-width: 60%;">
-
 The top singular vector from many source layers (5, 7, 11, 13, 14, 16) produced anti-refusal behavior, and even several orthogonal vectors from the same source/target pair could independently flip refusal. Two patterns emerged:
 
 **Within a source layer, the top singular vector was stable across target layers.** For example (14,27)v0 and (14,19)v0 have a cosine similarity of 0.96. The dominant mode of variation at source layer 14 is the same regardless of where the downstream response is measured.
@@ -187,7 +192,7 @@ The top singular vector from many source layers (5, 7, 11, 13, 14, 16) produced 
 
 **Power iteration process (or randomized svd) is only correct up to sign** Only one sign of each singular vector was evaluated in the sensitivity atlas, so behavioral changes associated with the opposite sign may have been missed.
 
-**Scale selection is underexplored.** Most experiments used a fixed steering scale of 10, but MLP output norms vary ~50x across layers in Qwen3-8B (5-15 at early layers, 100-700 in late layers)[^8]. This likely explains incoherent generations from early-layer vectors and weak effects from late-layer sources. Initial experiments with norm-proportional scaling showed more coherent effects across layers and has been added to the dashboard and the KL heatmap for refusal was updated with this norm scaling.
+**Scale selection is underexplored.** 
 
 **KL divergence is a noisy proxy for behavioral change.** I used logit KL divergence as a filter to select vectors worth evaluating with full generation. While it worked as a coarse filter, high KL did not guarantee meaningful behavioral shifts, and I did not systematically characterize when it misleads. A better selection criterion could improve the yield of useful vectors.
 
@@ -213,9 +218,9 @@ I want to thank Jack Strand and Nick Turner for helpful discussions and feedback
 
 ---
 
-[^1]: Power iteration converges because applying $(J^\top J)$ amplifies the component along the top singular vector exponentially. Expanding $\mathbf{v}$ in the right singular basis $\mathbf{v} = \sum_i c_i \mathbf{v}_i$, where $c_i = \mathbf{v}_i^\top \mathbf{v}$ is the projection of the initial vector onto each singular direction, we get $(J^\top J)^n \mathbf{v} = \sum_i \sigma_i^{2n} c_i \mathbf{v}_i$. The $\sigma_1^{2n}$ term dominates, so after normalization the iterate converges to $\mathbf{v}_1$ at a rate governed by $|\sigma_2 / \sigma_1|^{2n}$. The more separated the top two singular values, the faster the convergence.
+[^1]: Power iteration converges because applying $$(J^\top J)$$ amplifies the component along the top singular vector exponentially. Expanding $$\mathbf{v}$$ in the right singular basis $$\mathbf{v} = \sum_i c_i \mathbf{v}_i$$, where $$c_i = \mathbf{v}_i^\top \mathbf{v}$$ is the projection of the initial vector onto each singular direction, we get $$(J^\top J)^n \mathbf{v} = \sum_i \sigma_i^{2n} c_i \mathbf{v}_i$$. The $$\sigma_1^{2n}$$ term dominates, so after normalization the iterate converges to $$\mathbf{v}_1$$ at a rate governed by $$|\sigma_2 / \sigma_1|^{2n}$$. The more separated the top two singular values, the faster the convergence.
 
-[^2]: Block power iteration recovers the correct top-$k$ subspace but not the individual singular vectors within it. The Rayleigh-Ritz procedure resolves this: project $(J^\top J)$ onto the converged subspace to form the small matrix $M = V^\top(J^\top J)V$, then diagonalize $M$ to rotate $V$ into the true singular vectors. In the code I also add padding vectors beyond the desired $k$ to improve stability in the near-degenerate part of the spectrum, where singular values are close together and individual vectors become noisy.
+[^2]: Block power iteration recovers the correct top-$$k$$ subspace but not the individual singular vectors within it. The Rayleigh-Ritz procedure resolves this: project $$(J^\top J)$$ onto the converged subspace to form the small matrix $$M = V^\top(J^\top J)V$$, then diagonalize $$M$$ to rotate $$V$$ into the true singular vectors. In the code I also add padding vectors beyond the desired $$k$$ to improve stability in the near-degenerate part of the spectrum, where singular values are close together and individual vectors become noisy.
 
 [^3]: Greedy vs sampling: greedy decoding with a temperature of 0 would sometimes break the steered effect and bring the model back to its default behavior, which is pretty interesting!
 
@@ -230,5 +235,3 @@ I want to thank Jack Strand and Nick Turner for helpful discussions and feedback
     CAA actually has the best performance across all scales for producing unclear answers to the multiple choice prompts. Multi-prompt power steering has an asymmetric effect where the negative direction made the model incoherent but the positive direction induced fairly large steering effects without compromising fidelity. I saw a more muted but similar effect in the MELBO and single-prompt power steering vectors.
 
 [^7]: ![MELBO vs power steering cosine similarity]({{'assets/images/posts/2026-02-17-Power-Steering/melbo_vs_power_steering.png' | relative_url }})
-
-[^8]: The <a href="https://omar.bet/dashboard" target="_blank">dashboard</a> has now been updated for refusal and roleplay prompts for Qwen3-8B to include power steering vectors scaled by 0.35 of the representation norm. It produces more coherent effects at the earlier and later layers.
