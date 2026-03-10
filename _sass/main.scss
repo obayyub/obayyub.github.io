@@ -214,17 +214,39 @@ body {
     }
     
     pre {
-      background-color: $light-gray;
+      background-color: #272822;
       padding: $spacing-unit;
       border-radius: 4px;
       overflow-x: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
+      color: #f8f8f2;
 
       code {
         background: none;
         padding: 0;
+        color: inherit;
       }
+    }
+
+    // Rouge syntax highlighting (monokai)
+    .highlight {
+      .c, .cd, .cm, .c1, .cs { color: #75715e; } // comments
+      .k, .kd, .kn, .kp, .kr, .kt { color: #66d9ef; } // keywords
+      .s, .sb, .sc, .sd, .s2, .se, .sh, .si, .sx, .s1, .ss { color: #e6db74; } // strings
+      .na { color: #a6e22e; } // name attribute
+      .nb, .bp { color: #f8f8f2; } // builtins
+      .nc, .no { color: #a6e22e; } // class name, constant
+      .nd { color: #a6e22e; } // decorator
+      .nf, .fm { color: #a6e22e; } // function name
+      .nn { color: #f8f8f2; } // module name
+      .ni { color: #f8f8f2; } // entity
+      .nt { color: #f92672; } // tag
+      .nv, .vc, .vg, .vi { color: #f8f8f2; } // variables
+      .o, .ow { color: #f92672; } // operators
+      .p { color: #f8f8f2; } // punctuation
+      .mi, .mf, .mh, .mo, .il { color: #ae81ff; } // numbers
+      .err { color: #960050; background-color: #1e0010; }
     }
 
     table {
