@@ -1,81 +1,18 @@
+---
+layout: post
+title: "Power Steering: Behavior Steering via Layer-to-Layer Jacobian Singular Vectors"
+date: 2026-02-17
+---
 
-*Update March 08, 2026: Larger rewrite for improved clarity*
+*Update March 05, 2026*
 
 ## TLDR
 
-The map of how the activations of one 'source' layer in an LLM impact the activations in some later 'target' layer can provide vectors for steering LLM behavior. Computing this map, or the Jacobian, is costly but the top high rank components can be determined in just ~15 forward passes in a process called power iteration. The use of power iteration to find steering vectors gave the natural name 'Power Steering'. The resulting power steering vectors produce comparable performance to similar but more costly non-linear optimization techniques that find vectors for maximizing source layer to target layer impacts. The cheap computation of power steering allows one to map all source/target pairs in a model to find interesting steering behavior. Steering behavior is mostly easily found using prompts that have decision forks for the model.
+The right singular vectors of the Jacobian between MLP outputs at a source and target layer can steer model behavior. This method, which I call power steering (power iteration + steering vectors), builds on the intuition from [MELBO](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1), but replaces nonlinear optimization with its local linear approximation. I used block power iteration with Rayleigh-Ritz correction to cheaply extract the top-$k$ right singular vectors, requiring only ~15 forward passes per layer pair. The method is cheap enough to map every layer pair in a model, producing a full sensitivity atlas. The discovered vectors worked best on prompts with tension (arithmetic, refusal, corrigibility) rather than open-ended generation, and produced similar performance to MELBO while outperforming CAA on corrigibility steering in Qwen3-14B.
 
-## Introduction and Background on Steering Vectors
+## Where Power Steering Works: Prompts with Tension
 
-### Steering LLM Behavior
-Controlling LLM behavior without low level mechanistic interpretability is an attractive facet of the technical AI safety field. Certain methods such as Steering Vectors work by adding a direction in representation space to shift model behavior toward a target concept. This is often performed at a specific layer and token positin during inference to elicit specific behaviors. Steering techniques are underpinned by the Linear Representation Hypothesis, that model internals are composed of many salient linear directions in representaiton space.
-
-Steering vectors are primarily formed via Contrastive Activation Addition (CAA). The LLM is given pairs of prompts that elicit different opposing concpets (e.g. love vs hate). Run both through the model, capture the model representation at some points (often the residual stream), and take the difference. That's your steering vector. At inference, add or subtract this vector (scaled by some coefficient) to shift model behavior. This can work with as little as a [single prompt pair](https://arxiv.org/abs/2308.10248), though more recent approaches average over many pairs. For a deeper introduction, see [Steering Llama 2 via Contrastive Activation Addition](https://arxiv.org/abs/2312.06681). CAA has known reliability issues: [prior work](https://arxiv.org/abs/2407.12404) demonstrated that steerability is highly variable across inputs, and spurious biases can inflate apparent effectiveness.
-
-### Unsupervised Steering
-
-One interesting approach for finding steering vectors in an 'unsupervised' manner is [MELBO](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1), which finds vectors that elicit latent behaviors in language models by "learning unsupervised pertubations of an early layer of an LLM." The goal of MELBO is to maximize the change in a specified target layer activations $Z$, through pertubation at a source layer. This pertubation, a bias vector $\theta$ of specific size $R$, is added to the source layer output. The bias vector $\theta$ is found via non-linear optimization using the following loss function which has been simplified for this discussion:
-
-$\max_{\|\theta\|_2 = R} \left\| Z_{{\text{target}}}(\theta) - Z_{{\text{target}}}(0) \right\|$
-
-Additional vectors can be found via orthogonalization during optimization, and the process can exploit nonlinearities to find off-manifold directions. MELBO could find interesting steering vectors to undo safety refusals and reveal latent behaviors such as chain-of-thought. These results would generalize to other contexts and could be elicited using single prompts. The process of influencing model behavior through layer-to-layer interactions can also be performed mechanistically through circuit decomposition via [Circuit Tracing](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
-
-A [natural question](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1#pQ9HCBYKknfhpdtmr) following MELBO may be, *how does a linear approximation of the same effect perform?* What does the gradient between layers already tell us about these interactions for a given prompt?
-
-### Power Steering: The Local Linear Approximation
-
-An alternative to MELBO is the local linear approximation through the layer-to-layer Jacobian, which maps how perturbations at some source layer will impact the activations at some target layer:
-
-$J = \partial(\text{target layer MLP output}) / \partial(\text{source layer MLP output})$.
-
-$J$ directly describes how the target representation changes through small perturbations $\mathbf{v}$ at the source layer. The right singular vectors of $J$ are the directions at the source layer that produce the largest response at the target layer, i.e. the directions the network is already most sensitive to for a given prompt. Stated another way, these vectors are the unit norm directions at the source which produce the largest linear response at the target layer. The vectors are the solution to the linearized version of the MELBO objective.
-
-The right singular vectors can be found without explicitly forming the Jacobian, which for an LLM would be a matrix of dimension $d_{\text{target}} \times d_{\text{source}}$. Power iteration only needs the matrix-vector product $(J^\top J)\mathbf{v}$, and repeated application $(J^\top J)^n \mathbf{v}$ converges to the top right singular vector[^convergence]. Computing $(J^\top J)\mathbf{v}$ requires both vector-Jacobian products (VJPs, $J^\top \mathbf{u}$) and Jacobian-vector products (JVPs, $J\mathbf{v}$). Standard backprop via Pytorch autodiff gives VJPs directly. JVPs can be obtained via reverse-over-reverse: differentiating the VJP $J^\top \mathbf{u}$ with respect to $\mathbf{u}$ in the direction $\mathbf{v}$ extracts the JVP $J\mathbf{v}$. This gives a four-step recipe for $(J^\top J)\mathbf{v}$:
-
-1. **Forward pass**: compute the target layer activations to set up the computation graph
-2. **VJP**: backpropagate an arbitrary vector $\mathbf{u}$ to get $J^\top \mathbf{u}$
-3. **Reverse-over-reverse**: differentiate $\mathbf{v}^\top (J^\top \mathbf{u})$ with respect to $\mathbf{u}$ to get $J\mathbf{v}$
-4. **VJP again**: backpropagate $J\mathbf{v}$ to get $J^\top(J\mathbf{v}) = (J^\top J)\mathbf{v}$
-
-Here is a simplified version of the core loop for finding the top singular vector. Each iteration runs one forward pass and uses three backward passes to apply $(J^\top J)$:
-```python
-# v: [hidden_dim] — our candidate singular vector, randomly initialized
-# perturbation: [1, hidden_dim] — added to source layer, requires_grad=True
-# target_activations: captured at target layer, shape [1, seq, hidden_dim]
-
-v = torch.randn(1, hidden_dim)
-v = v / v.norm()
-
-for i in range(num_iters):
-    # Forward pass: run model with perturbation at source layer, capture target layer
-    perturbation = torch.zeros(1, hidden_dim, requires_grad=True)
-    target_activations = forward_with_hook(model, prompt, perturbation, source_layer, target_layer)
-
-    # Step 1 — VJP: backprop to get J^T u
-    # autograd.grad requires a scalar, so we take the inner product with arbitrary u
-    u = torch.zeros_like(target_activations, requires_grad=True)
-    jt_u = torch.autograd.grad((target_activations * u).sum(), perturbation, create_graph=True)[0]
-
-    # Step 2 — Reverse-over-reverse: differentiate the VJP to get Jv
-    jv = torch.autograd.grad((jt_u * v).sum(), u)[0]
-
-    # Step 3 — VJP again: backprop to get J^T(Jv)
-    jtjv = torch.autograd.grad((target_activations * jv.detach()).sum(), perturbation)[0]
-
-    # Normalize for next iteration
-    v = jtjv / jtjv.norm()
-```
-
-A single layer pair can have multiple behaviorally relevant directions found via the Jacobian. To find the top-$k$ singular vectors, I use block power iteration: initialize $k$ random orthogonal columns, apply the same $(J^\top J)$ matvec to each, and re-orthogonalize via Gram-Schmidt after each iteration. This converges in under 5 iterations across all models and layer pairs I tested. After convergence, a Rayleigh-Ritz correction extracts the individual singular vectors from the converged subspace[^topk]. The full process costs ~15 forward passes per layer pair for $k=12$ vectors. Randomized SVD converges slightly faster in my experiments but requires the same type of matvecs. I used block power iteration because the implementation was already built.
-
-[^convergence]: Power iteration converges because applying $(J^\top J)$ amplifies the component along the top singular vector exponentially. Expanding $\mathbf{v}$ in the right singular basis $\mathbf{v} = \sum_i c_i \mathbf{v}_i$, where $c_i = \mathbf{v}_i^\top \mathbf{v}$ is the projection of the initial vector onto each singular direction, we get $(J^\top J)^n \mathbf{v} = \sum_i \sigma_i^{2n} c_i \mathbf{v}_i$. The $\sigma_1^{2n}$ term dominates, so after normalization the iterate converges to $\mathbf{v}_1$ at a rate governed by $|\sigma_2 / \sigma_1|^{2n}$. The more separated the top two singular values, the faster the convergence.
-
-[^topk]: Block power iteration recovers the correct top-$k$ subspace but not the individual singular vectors within it. The Rayleigh-Ritz procedure resolves this: project $(J^\top J)$ onto the converged subspace to form the small matrix $M = V^\top(J^\top J)V$, then diagonalize $M$ to rotate $V$ into the true singular vectors. In the code I also add padding vectors beyond the desired $k$ to improve stability in the near-degenerate part of the spectrum, where singular values are close together and individual vectors become noisy.
-
-
-### Where Power Steering Works: Prompts with Decision Forks and Latent Behavior
-
-Power steering works best when there's a latent behavior axis or a decision fork, where the model "wants" to do two things and steering tips the balance. For arithmetic on Qwen 1.7B, the model has a latent CoT circuit but defaults to pattern-matching. Steering amplifies that CoT circuit, an effect also observed in the [original MELBO post](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1#Chain_of_Thought_Vector). The most prominent effects appeared on prompts that involve tension/decision forks.
+Power steering works best when there's a latent behavior axis with tension, where the model "wants" to do two things and steering tips the balance. For arithmetic, the model has a latent CoT circuit but defaults to pattern-matching. Steering amplifies that CoT circuit, an effect also observed in the [original MELBO post](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1#Chain_of_Thought_Vector). The most prominent effects appeared on prompts that involve tension/decision forks.
 
 + **Arithmetic** (Qwen3-1.7B-Base): Simple variable arithmetic steered from 6% to 90% accuracy by unlocking chain of thought
 + **Refusal** (Qwen3-8B): Many dominant Jacobian directions at many middle layers flipped refusal→compliance for generating phishing emails
@@ -85,6 +22,25 @@ I observed weaker effects on open-ended generation like the implementation of kn
 
 + **Narrative** (Qwen3-8B): Surface-level format changes (genre tags, titles, chapters), story content never changed.
 + **Code** (Qwen3-8B): Response style shifted, changes in reasoning format, approach did not change
+
+## Steering via the Jacobian
+
+### Jacobians Between Layer MLP Outputs
+
+Activation steering modifies model behavior by adding a vector to the (usually) residual stream at a chosen layer. These steering vectors are often found by taking representation differences at MLP outputs [such as with CAA](https://arxiv.org/abs/2312.06681). MELBO finds vectors through direct optimization of $\max_{\mathbf{v}} \|f(\mathbf{x} + \mathbf{v}) - f(\mathbf{x})\|$ subject to $\|\mathbf{v}\| \leq r$, where $f$ maps from a source layer's MLP output to a target layer's MLP output. Additional vectors can be found via orthogonalization during optimization, and the process can exploit nonlinearities to find off-manifold directions. The norm constraint $r$ is a critical hyperparameter: too small and the vectors stay on-manifold, too large and the model becomes incoherent.
+
+An alternative is the local linear approximation through the Jacobian: $J = \partial(\text{target layer MLP output}) / \partial(\text{source layer MLP output})$. $J$ directly describes how the target representation changes through small perturbations $\mathbf{v}$ at the source layer. The right singular vectors of $J$ are the directions at the source layer that produce the largest response at the target layer, i.e. the directions the network is already most sensitive to for a given prompt. These act as natural steering vectors.
+
+### Getting the Local Linear Approximation
+
+The right singular vectors can be found without explicitly forming the Jacobian. Power iteration only needs the matrix-vector product $(J^\top J)\mathbf{v}$, and repeated application $(J^\top J)^n \mathbf{v}$ converges to the top right singular vector. Since standard backprop gives VJPs ($J^\top \mathbf{u}$) but not JVPs ($J\mathbf{v}$), JVPs can be obtained via reverse-over-reverse: differentiate the VJP computation with respect to $\mathbf{u}$, applied in the direction $\mathbf{v}$. This gives a three-step recipe for $(J^\top J)\mathbf{v}$:
+  1. **VJP**: compute $J^\top \mathbf{u}$ for an arbitrary $\mathbf{u}$
+  2. **Reverse-over-reverse**: differentiate step 1 w.r.t. $\mathbf{u}$ in direction $\mathbf{v}$ → gives $J\mathbf{v}$
+  3. **VJP again**: compute $J^\top(J\mathbf{v}) = (J^\top J)\mathbf{v}$
+
+This costs roughly three forward passes per vector per iteration, which is cheap enough to rapidly generate steering vectors for many source-target pairs. The implementation can certainly be made more efficient, but reverse-over-reverse works out of the box with PyTorch.
+
+To find the top-$k$ right singular vectors, form $k$ random orthogonal vectors $V$ and repeatedly apply $(J^\top J)$ to each column, re-orthogonalizing via Gram-Schmidt after each iteration. This block power iteration converges in less than 5 iterations across all models and layer pairs I tested, but it recovers the correct top-$k$ subspace rather than the individual singular vectors. To extract the true singular vectors, apply the Rayleigh-Ritz procedure: project $(J^\top J)$ onto the converged subspace to form $M = V^\top(J^\top J)V$, then diagonalize $M$ to rotate $V$ into the correct right singular vectors.
 
 ## Mapping an Entire Model
 
