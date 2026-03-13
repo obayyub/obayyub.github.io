@@ -26,7 +26,8 @@ $$\max_{\|\text{v}\|_2 = R} \left\| Z_{\text{target}}(\text{v}) - Z_{\text{targe
 Additional vectors can be found via orthogonalization during optimization, and the process can exploit nonlinearities to find off-manifold directions. MELBO could find interesting steering vectors to undo safety refusals and reveal latent behaviors such as chain-of-thought. These results would generalize to other contexts and could be elicited using single prompts. A [natural question](https://www.lesswrong.com/posts/ioPnHKFyy4Cw2Gr2x/mechanistically-eliciting-latent-behaviors-in-language-1#pQ9HCBYKknfhpdtmr) following MELBO may be, *how does a linear approximation of the same effect perform?* What does the gradient between layers already tell us about these interactions for a given prompt?
 
 <img src="{{'assets/images/posts/2026-02-17-Power-Steering/powersteer-scheme.png' | relative_url }}" alt="Power Steering">
-** Comparison of CAA, MELBO, and Power Steering methods of producing steering vectors for a given model and prompt(s).**
+
+*Comparison of CAA, MELBO, and Power Steering methods of producing steering vectors for a given model and prompt(s).*
 
 ### Power Steering: The Local Linear Approximation
 
