@@ -4,7 +4,7 @@ title: "Power Steering: Behavior Steering via Layer-to-Layer Jacobian Singular V
 date: 2026-02-17
 ---
 
-*Update March 08, 2026: Larger rewrite for improved clarity*
+*Update March 12, 2026: Larger rewrite for improved clarity*
 
 ## TLDR
 
